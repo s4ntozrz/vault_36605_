@@ -1,9 +1,11 @@
 const Simulation = {
     animationFrameId: null, lastContractGenTime: 0,
+    realWeatherTimer: 0, // Controla o tempo real para checar a API
     
     start() {
         if(State.data.simulation.running) return;
-        State.data.simulation.running = true; State.data.simulation.lastRealTime = performance.now();
+        State.data.simulation.running = true; 
+        State.data.simulation.lastRealTime = performance.now();
         State.save(); this.loop();
     },
     
@@ -16,15 +18,28 @@ const Simulation = {
     
     loop() {
         if (!State.data.simulation.running) return;
-        const now = performance.now(); const deltaRealMs = now - State.data.simulation.lastRealTime;
+        
+        const now = performance.now(); 
+        
+        // 🔴 CORREÇÃO DO BUG CRÍTICO DO VEÍCULO ENGANCHAR:
+        // Quando o usuário muda de aba, o tempo(now) salta absurdamente.
+        // O "Math.min" trava esse salto num máximo de 100ms, impedindo o jogo de explodir a física!
+        const deltaRealMs = Math.min(now - State.data.simulation.lastRealTime, 100);
+        
         State.data.simulation.lastRealTime = now;
         const simDeltaMs = deltaRealMs * State.data.simulation.speed;
         State.data.simulation.currentTime += simDeltaMs;
         
         this.updateVehicles(simDeltaMs);
         this.marketManager(simDeltaMs); 
-        this.weatherManager(simDeltaMs); 
-        this.bankAndFinanceManager(simDeltaMs); // O Banco Operando
+        this.bankAndFinanceManager(simDeltaMs); 
+        
+        // Timer de Clima Baseado no tempo REAL, não na velocidade da simulação
+        this.realWeatherTimer -= deltaRealMs;
+        if (this.realWeatherTimer <= 0) {
+            this.realWeatherTimer = 5 * 60 * 1000; // Consulta a API a cada 5 minutos reais
+            this.updateRealWorldWeather();
+        }
         
         MapService.updateMarkers();
         UI.updateVehicleDetails();
@@ -33,37 +48,37 @@ const Simulation = {
         this.animationFrameId = requestAnimationFrame(() => this.loop());
     },
 
-    weatherManager(simDeltaMs) {
-        State.data.simulation.weatherTimer -= simDeltaMs;
-        if (State.data.simulation.weatherTimer <= 0) {
-            State.data.simulation.weatherTimer = Utils.getRandomInt(2, 4) * 60 * 60000;
-            const roll = Math.random(); let newWeather = 'clear';
-            if (roll < 0.20) newWeather = 'rain'; else if (roll < 0.30) newWeather = 'fog';
+    // 📡 MOTOR CLIMÁTICO REAL
+    async updateRealWorldWeather() {
+        // Pega a coordenada da base, ou do primeiro caminhão, ou usa Recife como fallback
+        let refLat = -8.06, refLng = -34.89; 
+        if (State.data.company.hq) { refLat = State.data.company.hq.lat; refLng = State.data.company.hq.lng; }
+        else if (State.data.vehicles.length > 0) { refLat = State.data.vehicles[0].posicao.lat; refLng = State.data.vehicles[0].posicao.lng; }
 
-            if (State.data.simulation.weather !== newWeather) {
-                State.data.simulation.weather = newWeather;
-                if(newWeather === 'rain') UI.logEvent("🌧️ Chuva intensa. Velocidade reduzida e maior risco de acidentes.", "warning");
-                else if(newWeather === 'fog') UI.logEvent("🌫️ Neblina densa na região. Cuidado redobrado nas estradas.", "warning");
-                else UI.logEvent("☀️ O tempo abriu. Condições normais de tráfego.", "info");
-                UI.updateWeatherUI(); State.save();
-            }
+        const newWeather = await Utils.getRealWeather(refLat, refLng);
+
+        if (State.data.simulation.weather !== newWeather) {
+            State.data.simulation.weather = newWeather;
+            if(newWeather === 'rain') UI.logEvent("🌧️ Satélite: Detectada chuva forte operando na área da frota.", "warning");
+            else if(newWeather === 'fog') UI.logEvent("🌫️ Satélite: Neblina densa detectada nas rotas. Velocidade reduzida.", "warning");
+            else UI.logEvent("☀️ Satélite: Tempo limpo e visibilidade perfeita.", "info");
+            
+            UI.updateWeatherUI(); 
+            State.save();
         }
     },
 
-    // BANCO E INTELIGÊNCIA FINANCEIRA DO DASHBOARD
     bankAndFinanceManager(simDeltaMs) {
         State.data.simulation.bankTimer -= simDeltaMs;
         if (State.data.simulation.bankTimer <= 0) {
-            State.data.simulation.bankTimer = 24 * 60 * 60000; // Recarrega para mais 24h
+            State.data.simulation.bankTimer = 24 * 60 * 60000; 
             
-            // Cobra juros de 1% do empréstimo do saldo de caixa!
             if (State.data.company.loan > 0) {
                 const interest = State.data.company.loan * 0.01;
                 State.data.company.cash -= interest;
                 UI.logEvent(`🏦 Banco: Cobrança diária de juros de -${Utils.formatCurrency(interest)}`, 'danger');
             }
 
-            // Grava ponto histórico para o Gráfico de Linha do Dashboard
             State.data.financeHistory.push({
                 dayLabel: new Date(State.data.simulation.currentTime).toLocaleDateString('pt-BR'),
                 balance: State.data.company.cash
@@ -149,14 +164,13 @@ const Simulation = {
                 } else if (roll < 0.9) { 
                     v.activeEvent = { type: 'transito', label: 'Trânsito Intenso', timeLeft: 15 * 60000, speedMultiplier: 0.2 }; 
                     UI.logEvent(`🚧 Trânsito intenso parou o veículo ${v.placa}.`, 'warning', v.id);
-                    State.data.heatmapData.push([v.posicao.lat, v.posicao.lng, 0.5]); // Adiciona Risco Médio no Mapa Térmico
+                    State.data.heatmapData.push([v.posicao.lat, v.posicao.lng, 0.5]); 
                 } else { 
                     v.activeEvent = { type: 'acidente', label: 'Acidente na Via', timeLeft: 30 * 60000, speedMultiplier: 0 }; 
                     UI.logEvent(`💥 Acidente paralisou via do caminhão ${v.placa}!`, 'danger', v.id);
-                    State.data.heatmapData.push([v.posicao.lat, v.posicao.lng, 1.0]); // Adiciona Risco Alto no Mapa Térmico
+                    State.data.heatmapData.push([v.posicao.lat, v.posicao.lng, 1.0]); 
                 }
                 
-                // Evita estourar a memória com milhares de pontos de calor (Cap 300)
                 if(State.data.heatmapData.length > 300) State.data.heatmapData.shift();
                 MapService.updateHeatmap();
                 UI.renderVehiclesList(); 
