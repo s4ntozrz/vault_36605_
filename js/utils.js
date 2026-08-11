@@ -24,6 +24,24 @@ const Utils = {
     },
     formatTimeOnly: (timestamp) => new Date(timestamp).toLocaleTimeString('pt-BR'),
 
+    // NOVO: Conecta com Satélite Real da API Open-Meteo
+    getRealWeather: async (lat, lng) => {
+        try {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`;
+            const res = await fetch(url);
+            const data = await res.json();
+            const code = data.current_weather.weathercode;
+            
+            // Padrão de códigos WMO (Organização Meteorológica Mundial)
+            if (code === 45 || code === 48) return 'fog'; // Neblina
+            if (code >= 51 && code <= 99) return 'rain';  // Chuva/Tempestade
+            return 'clear'; // Limpo/Nublado
+        } catch (e) {
+            console.error("Falha ao comunicar com Satélite Climático", e);
+            return 'clear';
+        }
+    },
+
     getRoadPath: async (waypoints) => {
         try {
             const coordsStr = waypoints.map(w => `${w.lng},${w.lat}`).join(';');
