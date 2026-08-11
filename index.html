@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro de Controle Logístico</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- CSS do Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <header>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <h1>CCO LOGÍSTICO</h1>
+            <div id="company-cash" class="cash-display">Caixa: R$ 0,00</div>
+        </div>
+        <div id="clock">
+            <div id="weather-indicator" class="weather-indicator" title="Clima Atual">☀️ Claro</div>
+            <span class="online-indicator"></span>
+            <span id="real-time">--/--/---- --:--:--</span>
+        </div>
+    </header>
+    
+    <div class="layout" id="app-layout">
+        <aside class="panel-left" id="panel-left">
+            <div class="panel-header">
+                <h2>Operações</h2>
+                <button id="btn-new-op">+ Rota Livre</button>
+            </div>
+            <div class="stats-buttons">
+                <button id="btn-contracts" style="background: #2e7d32; font-weight:bold;">📦 Contratos</button>
+                <button id="btn-dashboard" style="background: #1976d2; font-weight:bold;">📊 Dashboard</button>
+                <button id="btn-bank" style="background: #fbc02d; color:#000; font-weight:bold;">🏦 Banco</button>
+                <button id="btn-company">🏢 Empresa</button>
+                <button id="btn-manage-fleet">🚛 Frota</button>
+                <button id="btn-manage-drivers">👷 Condutores</button>
+                <button id="btn-heatmap">🔥 Mapa de Calor</button>
+                <button id="btn-history">📜 Histórico</button>
+            </div>
+            <div id="vehicles-list"></div>
+        </aside>
+        
+        <main id="main-area">
+            <button id="btn-toggle-panel" class="floating-btn" title="Ocultar/Mostrar Painel">☰</button>
+            <button id="btn-exit-fs" class="hidden">❌ Sair da Tela Cheia</button>
+            
+            <div id="event-feed">
+                <h4>📡 Log Global <button id="btn-toggle-feed" title="Minimizar/Expandir">–</button></h4>
+                <div id="event-feed-list"></div>
+            </div>
+
+            <div id="map"></div>
+            <div id="weather-overlay" class="weather-overlay clear"></div>
+            
+            <div id="fullscreen-footer" class="hidden">
+                <div class="fs-info">
+                    <span style="font-size: 24px;">🚚</span>
+                    <div id="fs-vehicle-info">Nenhum veículo selecionado</div>
+                </div>
+                <div class="fs-progress-container">
+                    <div id="fs-progress-text">Progresso: 0%</div>
+                    <div class="fs-progress-bar"><div id="fs-progress-fill"></div></div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="btn-play">▶ Iniciar</button>
+                <button id="btn-pause">⏸ Pausar</button>
+                <button id="btn-reset">⏹ Resetar</button>
+                <button id="btn-theme">🌙 Tema</button>
+                <button id="btn-fullscreen">⛶ Tela Cheia</button>
+                <div class="speed-controls">
+                    <span>Vel:</span>
+                    <button class="speed-btn" data-speed="1">1x</button>
+                    <button class="speed-btn" data-speed="10">10x</button>
+                    <button class="speed-btn" data-speed="60">60x</button>
+                    <button class="speed-btn" data-speed="120">120x</button>
+                </div>
+            </div>
+        </main>
+        
+        <aside class="panel-right" id="panel-right">
+            <div class="panel-header" style="border-bottom: 1px solid #333; padding-bottom: 10px;">
+                <h2>Detalhes</h2>
+                <button id="btn-close-details" class="close-panel-btn hidden-desktop" title="Fechar">❌</button>
+            </div>
+            <div id="panel-details" class="details-content">
+                <p>Selecione um veículo no mapa ou na lista.</p>
+            </div>
+        </aside>
+    </div>
+
+    <div id="modal-new" class="modal hidden"><div class="modal-content"><h3 id="route-modal-title">Nova Operação</h3><div class="form-row"><div class="form-group"><label>Veículo:</label><select id="sel-vehicle"></select></div><div class="form-group"><label>Motorista:</label><select id="sel-driver"></select></div></div><div id="hub-selection-group" class="form-group hidden" style="background:#2a2a2a; padding:10px; border-left:3px solid #ffeb3b; border-radius:4px;"><label style="color:#ffeb3b; font-weight:bold;">Centro de Tratamento:</label><select id="sel-hub"></select></div><div class="form-group cargo-section"><label>Itens da Carga:</label><div id="cargo-list"></div><button id="btn-add-item" class="btn-secondary" style="margin-top:5px;">+ Add Item</button><div id="cargo-total-display" class="cargo-totals">Total: 0 | R$ 0,00</div></div><p style="margin-top:15px; color:#aaa; font-size:0.9em;">Origem/Destino:</p><div class="routing-section"><div class="address-row"><button id="btn-pick-origin" class="pick-btn">📍 MAPA</button><input type="text" id="inp-origin-addr" placeholder="Origem..."><button id="btn-search-origin" class="search-btn">🔍</button></div><div class="address-row"><button id="btn-pick-dest" class="pick-btn">🏁 MAPA</button><input type="text" id="inp-dest-addr" placeholder="Destino..."><button id="btn-search-dest" class="search-btn">🔍</button></div></div><div class="modal-actions"><button id="btn-cancel-new" class="btn-secondary">Cancelar</button><button id="btn-save-new" class="btn-primary" disabled>Iniciar Viagem</button></div></div></div>
+    <div id="modal-manage" class="modal hidden"><div class="modal-content" style="max-width:700px;"><h3 id="manage-title">Gestão</h3><div class="cargo-section" style="margin-bottom:15px;" id="manage-form-container"><h4 style="margin-bottom:10px; color:#aaa;" id="manage-form-title">Adicionar Novo</h4><div id="manage-form-inputs" class="form-row" style="flex-wrap:wrap;"></div><button id="btn-save-manage" class="btn-primary" style="margin-top:10px;">Comprar / Contratar</button><button id="btn-cancel-edit" class="btn-secondary hidden" style="margin-top:10px;">Cancelar</button></div><div id="manage-list" class="stats-container" style="max-height:40vh; overflow-y:auto;"></div><div class="modal-actions"><button id="btn-close-manage" class="btn-primary">Fechar</button></div></div></div>
+    <div id="modal-contracts" class="modal hidden"><div class="modal-content" style="max-width:800px;"><h3>Mercado de Fretes</h3><div id="contracts-list" class="stats-container" style="max-height:50vh; overflow-y:auto;"></div><div class="modal-actions"><button id="btn-close-contracts" class="btn-primary">Fechar</button></div></div></div>
+    <div id="modal-company" class="modal hidden"><div class="modal-content"><h3>Infraestrutura</h3><div class="stat-card" style="margin-bottom:15px;"><h4>🏢 Matriz</h4><p id="hq-status"></p><button id="btn-set-hq" class="btn-primary">Construir (R$ 50k)</button></div><div class="stat-card"><h4>🏪 Filiais</h4><p id="branches-status"></p><button id="btn-add-branch" class="btn-primary">Abrir (R$ 25k)</button></div><div class="modal-actions"><button id="btn-close-company" class="btn-secondary">Voltar</button></div></div></div>
+    <div id="modal-history" class="modal hidden"><div class="modal-content" style="max-width:600px;"><h3>Rotas Arquivadas</h3><div id="history-list" class="stats-container" style="max-height:50vh; overflow-y:auto;"></div><div class="modal-actions"><button id="btn-close-history" class="btn-primary">Fechar</button></div></div></div>
+    
+    <!-- MODAL DO BANCO -->
+    <div id="modal-bank" class="modal hidden">
+        <div class="modal-content">
+            <h3 style="color: #fbc02d;">🏦 Sistema Bancário</h3>
+            <p style="color: #aaa; margin-bottom: 20px;">O Banco Nacional cobra <strong>1% de juros compostos a cada 24h (simuladas)</strong> sobre o valor devido.</p>
+            <div class="stat-card" style="border-left-color: #fbc02d;">
+                <h4>Dívida Atual (Empréstimos Ativos)</h4>
+                <p style="font-size: 1.5em; font-weight: bold; color: #fbc02d;" id="bank-debt">R$ 0,00</p>
+                <button id="btn-pay-loan" class="btn-primary" style="margin-top: 10px; display:none; background:#4caf50;">Quitar Dívida (Pagar)</button>
+            </div>
+            <div style="margin-top: 20px;">
+                <h4 style="margin-bottom: 10px;">Solicitar Linha de Crédito:</h4>
+                <div style="display:flex; gap: 10px;">
+                    <button class="btn-secondary" onclick="UI.takeLoan(50000)">+ R$ 50 Mil</button>
+                    <button class="btn-secondary" onclick="UI.takeLoan(100000)">+ R$ 100 Mil</button>
+                    <button class="btn-secondary" onclick="UI.takeLoan(500000)">+ R$ 500 Mil</button>
+                </div>
+            </div>
+            <div class="modal-actions"><button id="btn-close-bank" class="btn-secondary">Sair do Banco</button></div>
+        </div>
+    </div>
+
+    <!-- MODAL DASHBOARD ANALÍTICO -->
+    <div id="modal-dashboard" class="modal hidden">
+        <div class="modal-content" style="max-width: 900px; max-height: 95vh;">
+            <h3 style="color: #1976d2;">📊 Dashboard de Business Intelligence</h3>
+            <div class="dashboard-grid">
+                <div class="chart-container">
+                    <h4>Crescimento do Caixa (Histórico de 30 Dias)</h4>
+                    <canvas id="chart-finance"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h4>Rentabilidade por Veículo (Top Frota)</h4>
+                    <canvas id="chart-fleet"></canvas>
+                </div>
+            </div>
+            <div class="modal-actions"><button id="btn-close-dashboard" class="btn-secondary">Fechar Análises</button></div>
+        </div>
+    </div>
+
+    <div id="receipt-template"><div class="receipt-header"><h2>COMPROVANTE DE OPERAÇÃO LOGÍSTICA</h2><p>CCO LOGÍSTICO</p></div><div class="receipt-body"><h3 style="border-bottom:2px solid #333; padding-bottom:5px;">Dados: <span id="rec-id"></span></h3><div style="display:flex; justify-content:space-between; margin-top:15px;"><div><p><strong>Placa:</strong> <span id="rec-plate"></span></p><p><strong>Modelo:</strong> <span id="rec-model"></span></p><p><strong>Mot:</strong> <span id="rec-driver"></span></p></div><div style="text-align:right;"><p><strong>Dist:</strong> <span id="rec-dist"></span></p><p><strong>Emissão:</strong> <span id="rec-date"></span></p></div></div><h3 style="border-bottom:2px solid #333; padding-bottom:5px; margin-top:25px;">Balanço Financeiro</h3><table class="receipt-table"><tr><td>Receita</td><td id="rec-rev" style="text-align:right;"></td></tr><tr><td>RH</td><td style="text-align:right;">- R$ 150,00</td></tr><tr><td>Manutenção</td><td id="rec-cost" style="text-align:right;"></td></tr><tr style="font-weight:bold; background:#f0f0f0;"><td>LUCRO LÍQUIDO</td><td id="rec-profit" style="text-align:right;"></td></tr></table><h3 style="border-bottom:2px solid #333; padding-bottom:5px; margin-top:25px;">Ocorrências</h3><table class="receipt-table" style="margin-top:10px;"><thead><tr><th style="width:120px;">Horário</th><th>Evento</th></tr></thead><tbody id="rec-logs"></tbody></table></div></div>
+
+    <!-- ===== IMPORTAÇÃO DE SCRIPTS (A ORDEM É CRÍTICA AQUI) ===== -->
+    
+    <!-- 1. Motor do Mapa Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- 2. Plugins que dependem do Leaflet -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+    
+    <!-- 3. Bibliotecas Auxiliares de Gráficos e PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- 4. Lógica da Aplicação -->
+    <script src="js/utils.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/simulation.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
