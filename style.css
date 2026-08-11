@@ -1,5 +1,19 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; display: flex; flex-direction: column; height: 100vh; overflow: hidden; width: 100vw; }
+
+/* Proteção estrutural para evitar que navegadores Mobile empurrem a tela para baixo */
+html { font-size: 16px; width: 100%; height: 100%; }
+
+body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    background-color: #121212; color: #ffffff; 
+    display: flex; flex-direction: column; 
+    width: 100%; 
+    height: 100%;
+    height: 100dvh; /* A mágica acontece aqui: Desconta a barra de URL do navegador */
+    overflow: hidden; 
+    position: absolute; /* Trava o App na tela */
+    top: 0; left: 0;
+}
 
 header { background: #1e1e1e; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; z-index: 10; flex-shrink: 0; width: 100%; overflow-x: auto; scrollbar-width: none; }
 header::-webkit-scrollbar { display: none; }
@@ -15,9 +29,8 @@ header h1 { font-size: 1.1rem; font-weight: 600; color: #4caf50; white-space: no
 .online-indicator { width: 8px; height: 8px; background-color: #4caf50; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 8px #4caf50; animation: blink 1.5s infinite ease-in-out; flex-shrink: 0;}
 @keyframes blink { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
 
-/* ESTRUTURA BLINDADA CONTRA ESMAGAMENTO DE FLEXBOX */
-.layout { display: flex; flex: 1; overflow: hidden; position: relative; width: 100%; min-width: 0; min-height: 0; }
-main { flex: 1; display: flex; flex-direction: column; position: relative; transition: all 0.3s; width: 100%; overflow: hidden; min-width: 0; min-height: 0;}
+.layout { display: flex; flex: 1; overflow: hidden; position: relative; width: 100%; height: 100%; }
+main { flex: 1; display: flex; flex-direction: column; position: relative; transition: all 0.3s; width: 100%; height: 100%; overflow: hidden; }
 #map { flex: 1; z-index: 1; min-height: 0; }
 
 .weather-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 800; transition: background 2s, backdrop-filter 2s, opacity 2s; opacity: 0; }
@@ -27,7 +40,7 @@ main { flex: 1; display: flex; flex-direction: column; position: relative; trans
 aside { background: #1a1a1a; padding: 15px; transition: transform 0.3s ease; display: flex; flex-direction: column;}
 .panel-left { width: 300px; border-right: 1px solid #333; flex-shrink: 0; z-index: 500;}
 .panel-left.collapsed { transform: translateX(-100%); position: absolute; height: 100%; border: none; box-shadow: none; }
-.panel-right { width: 320px; border-left: 1px solid #333; flex-shrink: 0; }
+.panel-right { width: 320px; border-left: 1px solid #333; flex-shrink: 0; display: flex; flex-direction: column; }
 #panel-details { flex: 1; overflow-y: auto; padding-top: 10px; }
 
 .floating-btn { position: absolute; top: 10px; left: 10px; z-index: 1000; background: #333; color: white; border: 1px solid #555; padding: 8px 12px; font-size: 1.1rem; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
@@ -57,8 +70,18 @@ aside { background: #1a1a1a; padding: 15px; transition: transform 0.3s ease; dis
 .fs-progress-bar { flex: 1; height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
 #fs-progress-fill { height: 100%; width: 0%; background: #4caf50; transition: width 0.3s linear; }
 
-/* CONTROLES INFERIORES PROTEGIDOS */
-.controls { background: #1e1e1e; padding: 10px 12px; display: flex; gap: 8px; align-items: center; z-index: 2; border-top: 1px solid #333; overflow-x: auto; white-space: nowrap; flex-shrink: 0; width: 100%; -webkit-overflow-scrolling: touch; }
+/* CONTROLES INFERIORES: Blindados para não sumirem da tela */
+.controls { 
+    background: #1e1e1e; 
+    padding: 10px 12px; 
+    display: flex; gap: 8px; align-items: center; 
+    z-index: 2; border-top: 1px solid #333; 
+    overflow-x: auto; white-space: nowrap; 
+    flex-shrink: 0; width: 100%; 
+    min-height: 55px; /* Força que a barra tenha altura mesmo comprimida */
+    padding-bottom: env(safe-area-inset-bottom, 10px); /* Previne corte no iOS/Android gesture bar */
+    -webkit-overflow-scrolling: touch; 
+}
 .controls::-webkit-scrollbar { display: none; } 
 button { background: #333; color: white; border: none; padding: 6px 10px; cursor: pointer; border-radius: 4px; font-weight: 600; font-size: 0.85rem; white-space: nowrap; transition: 0.2s; flex-shrink: 0;}
 button:hover:not(:disabled) { background: #555; }
@@ -74,7 +97,7 @@ aside h2 { font-size: 0.9rem; color: #888; text-transform: uppercase; letter-spa
 
 #btn-heatmap.active { background: #e65100; color: #fff; border-color: #ff9800; box-shadow: 0 0 10px #ff9800; }
 
-#vehicles-list { flex: 1; overflow-y: auto; }
+#vehicles-list { flex: 1; overflow-y: auto; padding-bottom: 20px;}
 .vehicle-item { padding: 8px; background: #2a2a2a; margin-bottom: 6px; cursor: pointer; border-radius: 6px; display: flex; align-items: center; gap: 8px; border-left: 4px solid transparent; position: relative; font-size: 0.9rem;}
 .vehicle-item:hover { background: #3a3a3a; }
 .vehicle-item.active { border-left-color: #4caf50; background: #333; }
@@ -125,10 +148,10 @@ aside h2 { font-size: 0.9rem; color: #888; text-transform: uppercase; letter-spa
 .hidden-desktop { display: none; }
 .close-panel-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #fff; padding: 0 5px; }
 
-/* 📱 REGRAS DE ULTRA-RESPONSIVIDADE (MOBILE & TABLET: ATÉ 1024px) */
-/* Isso resolve o problema de todos os iPads e Celulares ao mesmo tempo! */
-@media (max-width: 1024px) {
-    html { font-size: 14px; } /* Reduz a escala geral suavemente p/ evitar sobreposições */
+/* 📱 REGRAS DE ULTRA-RESPONSIVIDADE (Ajustado para 900px) */
+/* Isso protege tablets horizontais para operarem no modo PC, e celulares no modo gaveta */
+@media (max-width: 900px) {
+    html { font-size: 14px; } 
     .hidden-desktop { display: block !important; }
     
     .panel-left { position: absolute; height: 100%; width: 280px; z-index: 990; box-shadow: 4px 0 15px rgba(0,0,0,0.6); }
@@ -139,6 +162,7 @@ aside h2 { font-size: 0.9rem; color: #888; text-transform: uppercase; letter-spa
     .cash-display { font-size: 0.85rem; padding: 4px 8px; }
     .weather-indicator { margin-right: 5px; font-size: 0.8rem; padding: 3px 6px; }
 
+    /* Bottom Sheet Refinado */
     .panel-right {
         position: absolute; bottom: 0; left: 0; width: 100vw; height: 55vh; z-index: 1000;
         background: #1a1a1a; border-top: 4px solid #4caf50; border-left: none;

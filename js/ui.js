@@ -10,13 +10,15 @@ const UI = {
         document.getElementById('btn-heatmap').addEventListener('click', (e) => { MapService.toggleHeatmap(); e.target.classList.toggle('active'); });
 
         setInterval(() => {
-            const now = new Date(); const isMobile = window.innerWidth <= 1024;
+            const now = new Date(); 
+            // Mudança para 900px, mesma linha do CSS, para o relógio se adaptar.
+            const isMobile = window.innerWidth <= 900;
             const options = isMobile ? { hour: '2-digit', minute: '2-digit', second: '2-digit' } : { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }; 
             document.getElementById('real-time').innerText = now.toLocaleString('pt-BR', options).toUpperCase();
         }, 1000);
 
-        // Tablet e Mobile começam com os painéis laterais retraídos de forma inteligente
-        if (window.innerWidth <= 1024) document.getElementById('panel-left').classList.add('collapsed');
+        // Dispositivos até 900px de largura começam com painel lateral retraído
+        if (window.innerWidth <= 900) document.getElementById('panel-left').classList.add('collapsed');
 
         document.getElementById('btn-toggle-panel').addEventListener('click', () => { document.getElementById('panel-left').classList.toggle('collapsed'); MapService.invalidate(); });
         document.getElementById('btn-toggle-feed').addEventListener('click', () => { document.getElementById('event-feed').classList.toggle('collapsed'); });
@@ -93,7 +95,6 @@ const UI = {
         [...State.data.eventLog].reverse().forEach(l => { list.innerHTML += `<div class="event-log-item ${l.type==='danger'?'red':''}"><span>${Utils.formatTimeOnly(l.time)}</span>${l.message}</div>`; });
     },
 
-    // BANCO 🏦
     openBankModal() {
         document.getElementById('modal-bank').classList.remove('hidden');
         document.getElementById('bank-debt').innerText = Utils.formatCurrency(State.data.company.loan);
@@ -115,29 +116,22 @@ const UI = {
         State.save(); this.updateCashUI(); this.openBankModal();
     },
 
-    // DASHBOARD 📊
     openDashboardModal() {
         document.getElementById('modal-dashboard').classList.remove('hidden');
-        
         const labelsLinha = State.data.financeHistory.map(h => h.dayLabel);
         const dataLinha = State.data.financeHistory.map(h => h.balance);
-
         const activeFleet = State.data.fleet.filter(f => f.tripsCount > 0);
         const labelsBarra = activeFleet.map(f => f.plate);
         const dataBarra = activeFleet.map(f => f.totalProfit || 0);
 
         Chart.defaults.color = '#aaa';
-
         if(this.chartLine) this.chartLine.destroy();
         this.chartLine = new Chart(document.getElementById('chart-finance').getContext('2d'), {
-            type: 'line',
-            data: { labels: labelsLinha, datasets: [{ label: 'Saldo em Caixa (R$)', data: dataLinha, borderColor: '#4caf50', backgroundColor: 'rgba(76, 175, 80, 0.2)', fill: true, tension: 0.4 }] }
+            type: 'line', data: { labels: labelsLinha, datasets: [{ label: 'Saldo em Caixa (R$)', data: dataLinha, borderColor: '#4caf50', backgroundColor: 'rgba(76, 175, 80, 0.2)', fill: true, tension: 0.4 }] }
         });
-
         if(this.chartBar) this.chartBar.destroy();
         this.chartBar = new Chart(document.getElementById('chart-fleet').getContext('2d'), {
-            type: 'bar',
-            data: { labels: labelsBarra, datasets: [{ label: 'Lucro Líquido Gerado (R$)', data: dataBarra, backgroundColor: '#ff9800' }] }
+            type: 'bar', data: { labels: labelsBarra, datasets: [{ label: 'Lucro Líquido Gerado (R$)', data: dataBarra, backgroundColor: '#ff9800' }] }
         });
     },
 
@@ -279,7 +273,9 @@ const UI = {
             State.data.vehicles.push(newVehicle); State.save(); this.logEvent(`Viagem iniciada: ${fleetCar.plate} (${driver.name}). Prev: ${newVehicle.distanceKm.toFixed(0)}km.`, 'info');
             MapService.clearTempMarkers(); MapService.drawAllRoutes(); MapService.updateMarkers(); this.renderVehiclesList();
             document.getElementById('inp-origin-addr').value = ''; document.getElementById('inp-dest-addr').value = '';
-            if (window.innerWidth <= 1024) document.getElementById('panel-left').classList.add('collapsed');
+            
+            if (window.innerWidth <= 900) document.getElementById('panel-left').classList.add('collapsed');
+
             btnSave.textContent = 'Iniciar Viagem'; modal.classList.add('hidden');
         });
     },
@@ -346,7 +342,10 @@ const UI = {
     showVehicleDetails() {
         if (!State.data.selectedVehicle) { document.getElementById('panel-details').innerHTML = '<p>Selecione um veículo.</p>'; return; }
         const v = State.data.vehicles.find(v => v.id === State.data.selectedVehicle); if (!v) return;
-        document.getElementById('panel-right').classList.add('open');
+        
+        // Abre a gaveta se for dispositivo móvel/tablet
+        if (window.innerWidth <= 900) { document.getElementById('panel-right').classList.add('open'); }
+        
         let cargoHtml = ''; let totalCargo = 0;
         if(v.carga && v.carga.length > 0) { v.carga.forEach(c => { totalCargo += Number(c.value); cargoHtml += `<div class="cargo-item-line"><span>${c.qty}x ${c.name} (${c.unit})</span> <span>${Utils.formatCurrency(c.value)}</span></div>`; }); cargoHtml += `<div style="text-align:right; font-weight:bold; margin-top:5px; color:#4caf50;">Total NF: ${Utils.formatCurrency(totalCargo)}</div>`; } else cargoHtml = '<p>Sem itens.</p>';
         const vLogs = State.data.eventLog.filter(l => l.vehicleId === v.id); let logHtml = vLogs.length === 0 ? '<p style="color:#aaa; font-size: 0.9em;">Nenhum evento registrado.</p>' : [...vLogs].reverse().map(l => `<div style="font-size:0.85em; margin-bottom:6px; border-left:3px solid #555; padding-left:5px;"><span style="color:#888; font-size:0.9em; display:block;">${Utils.formatTimeOnly(l.time)}</span>${l.message}</div>`).join('');
