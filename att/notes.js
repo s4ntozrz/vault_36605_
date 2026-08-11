@@ -1,0 +1,5 @@
+1- Notei que durante o funcionamento do sistema em um celular (por exemplo, o meu tem as dimensões de tela em px 2712 x 1220 pixels), o layout fica um pouco desorganizado e algumas funções se sobrepõem outras, bem como, a escala dos ícones e opções ficam muito grandes.
+
+2- Outro erro - e um dos mias graves - é a falha no funcionamento dos veículos no mapa. Existem momentos em que o veiculo "engancha" em eventos aleatórios e sempre é necessário pausar e iniciar o jogo para que ele destrave e tenha um funcionamento correto. Quero que você corrija isso.
+
+3- Gostaria de corrigir também a exibição de chuva e outros eventos climaticos no mapa. Por exemplo: quando chove fica um chuvisco na tela que passa a impressão que existe uma falha na tela da aplicação, como se fosse uma falha na renderização no mapa. Isso é chato para quem está utilizando. Queria adiconar, também, uma interção real o clima baseado na localização do veículo (por exemplo: se chove no rio de janeiro, que chova no jogo também - efeitos reais do clima no mapa do jogo).
