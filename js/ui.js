@@ -10,12 +10,13 @@ const UI = {
         document.getElementById('btn-heatmap').addEventListener('click', (e) => { MapService.toggleHeatmap(); e.target.classList.toggle('active'); });
 
         setInterval(() => {
-            const now = new Date(); const isMobile = window.innerWidth <= 768;
+            const now = new Date(); const isMobile = window.innerWidth <= 1024;
             const options = isMobile ? { hour: '2-digit', minute: '2-digit', second: '2-digit' } : { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }; 
             document.getElementById('real-time').innerText = now.toLocaleString('pt-BR', options).toUpperCase();
         }, 1000);
 
-        if (window.innerWidth <= 768) document.getElementById('panel-left').classList.add('collapsed');
+        // Tablet e Mobile começam com os painéis laterais retraídos de forma inteligente
+        if (window.innerWidth <= 1024) document.getElementById('panel-left').classList.add('collapsed');
 
         document.getElementById('btn-toggle-panel').addEventListener('click', () => { document.getElementById('panel-left').classList.toggle('collapsed'); MapService.invalidate(); });
         document.getElementById('btn-toggle-feed').addEventListener('click', () => { document.getElementById('event-feed').classList.toggle('collapsed'); });
@@ -118,11 +119,9 @@ const UI = {
     openDashboardModal() {
         document.getElementById('modal-dashboard').classList.remove('hidden');
         
-        // Dados Gráfico Linha (Caixa)
         const labelsLinha = State.data.financeHistory.map(h => h.dayLabel);
         const dataLinha = State.data.financeHistory.map(h => h.balance);
 
-        // Dados Gráfico Barra (Rentabilidade da Frota)
         const activeFleet = State.data.fleet.filter(f => f.tripsCount > 0);
         const labelsBarra = activeFleet.map(f => f.plate);
         const dataBarra = activeFleet.map(f => f.totalProfit || 0);
@@ -141,8 +140,6 @@ const UI = {
             data: { labels: labelsBarra, datasets: [{ label: 'Lucro Líquido Gerado (R$)', data: dataBarra, backgroundColor: '#ff9800' }] }
         });
     },
-
-    // ... (O resto do arquivo - openCompany, initRouteModal, manage, archive, export pdf etc continua estritamente idêntico as lógicas que criamos nas etapas anteriores).
 
     openCompanyModal() {
         document.getElementById('modal-company').classList.remove('hidden');
@@ -282,7 +279,7 @@ const UI = {
             State.data.vehicles.push(newVehicle); State.save(); this.logEvent(`Viagem iniciada: ${fleetCar.plate} (${driver.name}). Prev: ${newVehicle.distanceKm.toFixed(0)}km.`, 'info');
             MapService.clearTempMarkers(); MapService.drawAllRoutes(); MapService.updateMarkers(); this.renderVehiclesList();
             document.getElementById('inp-origin-addr').value = ''; document.getElementById('inp-dest-addr').value = '';
-            if (window.innerWidth <= 768) document.getElementById('panel-left').classList.add('collapsed');
+            if (window.innerWidth <= 1024) document.getElementById('panel-left').classList.add('collapsed');
             btnSave.textContent = 'Iniciar Viagem'; modal.classList.add('hidden');
         });
     },
